@@ -373,6 +373,7 @@ def main(config_path: str, multithreaded: bool):
             run_benchmark_multithreaded(benchmark_config)
 
     else:
+        jax.distributed.initialize()
         for benchmark_config in benchmarks:
             run_single_benchmark(benchmark_config)
 

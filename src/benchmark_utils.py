@@ -1,6 +1,5 @@
 """Utility functions for microbenchmarking."""
 
-import datetime
 import os
 from typing import Dict, Any
 import glob
@@ -17,27 +16,46 @@ import re
 from collections import defaultdict
 import subprocess
 import shutil
+import time
+from jax.experimental import multihost_utils
 
 
-def simple_timeit(f, *args, matrix_dim=None, warmup_tries = 10, tries=10, task=None, trace_dir=None) -> float:
+def simple_timeit(f, *args, matrix_dim=None, warmup_tries = 10, tries=10, task=None, trace_dir=None) -> list[float]:
     """Simple utility to time a function for multiple runs."""
     assert task is not None
 
     if trace_dir:
         return timeit_from_trace(f, *args, matrix_dim=matrix_dim, warmup_tries=warmup_tries, tries=tries, task=task, trace_dir=trace_dir)
 
-    # warmup loop
+    is_multihost = jax.process_count() > 1
+
+    # --- Warmup Loop ---
     print(f"Running warmup loop with {warmup_tries} tries...")
     for _ in range(warmup_tries):
-        data = f(*args)
-    jax.block_until_ready(data)
+        result = f(*args)
+    # Block until the final warmup run is complete on the local host.
+    jax.block_until_ready(result)
+    print("Warmup complete.")
+    # --- Measurement Loop ---
     outcomes_ms = []
-    for _ in range(tries):
-        jax.devices()  # Force synchronization across devices
-        s = datetime.datetime.now()
+
+    # Final barrier after warmup to ensure all hosts are ready to start measuring together.
+    if is_multihost:
+        multihost_utils.sync_global_devices(f'warmup_done_{task}')
+
+    print(f"Running measurement loop with {tries} tries...")
+    for i in range(tries):
+        s_time = time.perf_counter()
+
         jax.block_until_ready(f(*args))
-        e = datetime.datetime.now()
-        outcomes_ms.append(1000 * (e - s).total_seconds())
+
+        # Synchronize (Multi-Host Only): Wait for ALL hosts to finish the operation.
+        if is_multihost:
+            multihost_utils.sync_global_devices(f'end_run_{i}_{task}')
+
+        e_time = time.perf_counter()
+        outcomes_ms.append(1000 * (e_time - s_time))
+
     return outcomes_ms
 
 
@@ -96,17 +114,20 @@ def is_local_directory_path(dir: str) -> bool:
     return dir.startswith("/") or dir.startswith("./") or dir.startswith("../")
 
 
-def timeit_from_trace(f, *args, matrix_dim=None, warmup_tries=10, tries=10, task=None, trace_dir=None) -> float:
+def timeit_from_trace(f, *args, matrix_dim=None, warmup_tries=10, tries=10, task=None, trace_dir=None) -> list[float]:
     """
     Time a function with jax.profiler and get the run time from the trace.
     """
     LOCAL_TRACE_DIR = "/tmp/microbenchmarks_tmptrace"
+    is_multihost = jax.process_count() > 1
 
     # warmup loop
     print(f"Running warmup loop with {warmup_tries} tries...")
     for _ in range(warmup_tries):
         data = f(*args)
     jax.block_until_ready(data)
+    if is_multihost:
+        multihost_utils.sync_global_devices(f'warmup_done_{task}')
 
     if matrix_dim is not None:
         trace_name = f"{task}_dim_{matrix_dim}"
@@ -121,11 +142,11 @@ def timeit_from_trace(f, *args, matrix_dim=None, warmup_tries=10, tries=10, task
     if trace_dir and not is_local_directory_path(trace_dir):
         tmp_trace_dir = f"{LOCAL_TRACE_DIR}/{trace_name}"
     with jax.profiler.trace(tmp_trace_dir):
-        for _ in range(tries):
-            jax.devices()  # Force synchronization across devices
+        for i in range(tries):
             with jax.profiler.TraceAnnotation(task):
                 jax.block_until_ready(f(*args))
-
+            if is_multihost:
+                    multihost_utils.sync_global_devices(f'end_run_{i}_{task}')
     trace = get_trace(tmp_trace_dir)
 
     if trace_full_dir != tmp_trace_dir:
