@@ -214,6 +214,11 @@ def psum_benchmark_calculate_metrics(
             dcn_bandwidth_gbyte_s_list, "dcn_bandwidth_gbyte_s", "psum_dcn",
             matrix_dim, dtype, matrix_size_gbyte, metrics
         )
+        generate_metrics_statistics(
+            dcn_time_ms_list, "dcn_time_ms", "psum_dcn",
+            matrix_dim, dtype, matrix_size_gbyte, metrics
+        )
+        metrics["dcn_time_ms_list"] = dcn_time_ms_list
 
     # Calculate metrics for ICI benchmark
     if ici_size > 1 and ici_time_ms_list is not None:
@@ -233,7 +238,8 @@ def psum_benchmark_calculate_metrics(
         )
         generate_metrics_statistics(
             ici_time_ms_list, "ici_time_ms", "psum_ici",
-            matrix_dim, dtype, matrix_size_gbyte, metrics)
+            matrix_dim, dtype, matrix_size_gbyte, metrics
+        )
         metrics["ici_time_ms_list"] = ici_time_ms_list
 
     return metadata, metrics
@@ -322,6 +328,11 @@ def psum_scatter_benchmark_calculate_metrics(
             dcn_bandwidth_gbyte_s_list, "dcn_bandwidth_gbyte_s", "psum_scatter_dcn",
             matrix_dim, dtype, matrix_size_gbyte, metrics
         )
+        generate_metrics_statistics(
+            dcn_time_ms_list, "dcn_time_ms", "psum_scatter_dcn",
+            matrix_dim, dtype, matrix_size_gbyte, metrics
+        )
+        metrics["dcn_time_ms_list"] = dcn_time_ms_list
 
     # Calculate metrics for ICI benchmark
     if ici_size > 1 and ici_time_ms_list is not None:
@@ -430,6 +441,11 @@ def all_gather_benchmark_calculate_metrics(
             dcn_bandwidth_gbyte_s_list, "dcn_bandwidth_gbyte_s", "all_gather_dcn",
             matrix_dim, dtype, matrix_size_gbyte, metrics
         )
+        generate_metrics_statistics(
+            dcn_time_ms_list, "dcn_time_ms", "all_gather_dcn",
+            matrix_dim, dtype, matrix_size_gbyte, metrics
+        )
+        metrics["dcn_time_ms_list"] = dcn_time_ms_list
 
     # Calculate metrics for ICI benchmark
     if ici_size > 1 and ici_time_ms_list is not None:
@@ -535,6 +551,11 @@ def ppermute_benchmark_calculate_metrics(
             dcn_bandwidth_gbyte_s_list, "dcn_bandwidth_gbyte_s", "ppermute_dcn",
             matrix_dim, dtype, matrix_size_gbyte, metrics
         )
+        generate_metrics_statistics(
+            dcn_time_ms_list, "dcn_time_ms", "ppermute_dcn",
+            matrix_dim, dtype, matrix_size_gbyte, metrics
+        )
+        metrics["dcn_time_ms_list"] = dcn_time_ms_list
 
     # Calculate metrics for ICI benchmark
     if ici_size > 1 and ici_time_ms_list is not None:
@@ -636,6 +657,11 @@ def all_to_all_benchmark_calculate_metrics(
             dcn_bandwidth_gbyte_s_list, "dcn_bandwidth_gbyte_s", "all_to_all_dcn",
             matrix_dim, dtype, matrix_size_gbyte, metrics
         )
+        generate_metrics_statistics(
+            dcn_time_ms_list, "dcn_time_ms", "all_to_all_ici",
+            matrix_dim, dtype, matrix_size_gbyte, metrics
+        )
+        metrics["dcn_time_ms_list"] = dcn_time_ms_list
 
     # Calculate metrics for ICI benchmark
     if ici_size > 1 and ici_time_ms_list is not None:
