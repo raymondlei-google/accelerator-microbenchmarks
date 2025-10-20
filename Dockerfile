@@ -1,5 +1,5 @@
 # Use a base image with Python and Git
-FROM python:3.10-slim
+FROM python:3
 
 # Install Git
 RUN apt-get update && apt-get install -y git
