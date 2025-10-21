@@ -28,7 +28,10 @@ RUN git clone https://github.com/raymondlei-google/accelerator-microbenchmarks.g
 # Navigate to the repository directory
 WORKDIR /app/accelerator-microbenchmarks
 
-RUN pip install -U --pre jax jaxlib libtpu requests -i https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --force
 
 # Install dependencies
 RUN pip install -r requirements.txt --force
+
+# Update jax jaxlib and libtpu to nightly builds
+RUN pip install -U --pre jax jaxlib libtpu requests -i https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --force
+
