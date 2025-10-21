@@ -1,7 +1,7 @@
-jax[tpu]==0.8.0.dev20251013
+# jax[tpu]==0.8.0
 absl-py
 flax
-jaxlib==0.8.0.dev20251013
+# jaxlib==0.8.0
 numpy
 pandas
 jsonlines
