@@ -1,7 +1,7 @@
 jax==0.8.0
 absl-py
 flax
-jaxlib
+jaxlib==0.8.0
 numpy
 pandas
 jsonlines
