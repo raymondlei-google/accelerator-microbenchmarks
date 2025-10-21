@@ -28,7 +28,7 @@ RUN git clone https://github.com/raymondlei-google/accelerator-microbenchmarks.g
 # Navigate to the repository directory
 WORKDIR /app/accelerator-microbenchmarks
 
-pip install --pre -U jax[tpu] jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --force
+RUN pip install --pre -U jax[tpu] jaxlib -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --force
 
 # Install dependencies
 RUN pip install -r requirements.txt
