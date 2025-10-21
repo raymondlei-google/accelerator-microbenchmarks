@@ -1,5 +1,5 @@
 # Use a base image with Python and Git
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Install Git
 RUN apt-get update && apt-get install -y git
@@ -13,10 +13,10 @@ RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dea
 # Install the Google Cloud SDK
 RUN apt-get update && apt-get install -y google-cloud-sdk
 
-# Set the default Python version to 3.11
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.11 1
+# Set the default Python version to 3.12
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.12 1
 
-# Set environment variables for Google Cloud SDK and Python 3.11
+# Set environment variables for Google Cloud SDK and Python 3.12
 ENV PATH="/usr/local/google-cloud-sdk/bin:/usr/local/bin/python3.11:${PATH}"
 
 # Set the working directory
@@ -29,10 +29,4 @@ RUN git clone https://github.com/raymondlei-google/accelerator-microbenchmarks.g
 WORKDIR /app/accelerator-microbenchmarks
 
 # Install dependencies
-RUN pip install --upgrade pip && \
-    pip install jax[tpu] -f https://storage.googleapis.com/jax-releases/libtpu_releases.html && \
-    pip install --upgrade clu tensorflow tensorflow-datasets && \
-    pip install jsonlines && \
-    pip install ray[default]
-
 RUN pip install -r requirements.txt
