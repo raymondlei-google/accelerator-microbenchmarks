@@ -35,6 +35,8 @@ RUN pip install --upgrade pip && \
     pip install jsonlines && \
     pip install ray[default]
 
+RUN pip install -r requirements.txt
+
 # Set environment variables
 ENV JAX_PLATFORMS=tpu,cpu \
     ENABLE_PJRT_COMPATIBILITY=true
