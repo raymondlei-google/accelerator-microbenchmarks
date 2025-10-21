@@ -35,3 +35,5 @@ RUN pip install -r requirements.txt --force
 # Update jax jaxlib and libtpu to nightly builds
 RUN pip install -U --pre jax[tpu] jaxlib libtpu requests -i https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ -f https://storage.googleapis.com/jax-releases/libtpu_releases.html --force
 
+RUN pip install libtpu==0.0.25
+
