@@ -29,4 +29,5 @@ RUN git clone https://github.com/raymondlei-google/accelerator-microbenchmarks.g
 WORKDIR /app/accelerator-microbenchmarks
 
 # Install dependencies
-RUN pip install -r requirements.txt --force
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt

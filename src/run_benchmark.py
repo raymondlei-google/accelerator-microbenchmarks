@@ -245,7 +245,8 @@ def write_to_csv(csv_path: str, calculate_metrics_results: List[Dict[str, Any]])
     try:
         df_list = [convert_dict_to_df(each) for each in calculate_metrics_results]
         df = pd.concat(df_list, ignore_index=True)
-
+        # Ensure folder exists
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
         df.to_csv(csv_path, index=False, sep="\t")
 
         print(f"Metrics written to CSV at {csv_path}.")
