@@ -20,12 +20,22 @@ import time
 from jax.experimental import multihost_utils
 
 
-def simple_timeit(f, *args, matrix_dim=None, warmup_tries = 10, tries=10, task=None, trace_dir=None) -> list[float]:
+def simple_timeit(
+    f, *args, matrix_dim=None, warmup_tries=10, tries=10, task=None, trace_dir=None
+) -> list[float]:
     """Simple utility to time a function for multiple runs."""
     assert task is not None
 
     if trace_dir:
-        return timeit_from_trace(f, *args, matrix_dim=matrix_dim, warmup_tries=warmup_tries, tries=tries, task=task, trace_dir=trace_dir)
+        return timeit_from_trace(
+            f,
+            *args,
+            matrix_dim=matrix_dim,
+            warmup_tries=warmup_tries,
+            tries=tries,
+            task=task,
+            trace_dir=trace_dir,
+        )
 
     is_multihost = jax.process_count() > 1
 
@@ -41,7 +51,7 @@ def simple_timeit(f, *args, matrix_dim=None, warmup_tries = 10, tries=10, task=N
 
     # Final barrier after warmup to ensure all hosts are ready to start measuring together.
     if is_multihost:
-        multihost_utils.sync_global_devices(f'warmup_done_{task}')
+        multihost_utils.sync_global_devices(f"warmup_done_{task}")
 
     print(f"Running measurement loop with {tries} tries...")
     for i in range(tries):
@@ -51,7 +61,7 @@ def simple_timeit(f, *args, matrix_dim=None, warmup_tries = 10, tries=10, task=N
 
         # Synchronize (Multi-Host Only): Wait for ALL hosts to finish the operation.
         if is_multihost:
-            multihost_utils.sync_global_devices(f'end_run_{i}_{task}')
+            multihost_utils.sync_global_devices(f"end_run_{i}_{task}")
 
         e_time = time.perf_counter()
         outcomes_ms.append(1000 * (e_time - s_time))
@@ -114,7 +124,9 @@ def is_local_directory_path(dir: str) -> bool:
     return dir.startswith("/") or dir.startswith("./") or dir.startswith("../")
 
 
-def timeit_from_trace(f, *args, matrix_dim=None, warmup_tries=10, tries=10, task=None, trace_dir=None) -> list[float]:
+def timeit_from_trace(
+    f, *args, matrix_dim=None, warmup_tries=10, tries=10, task=None, trace_dir=None
+) -> list[float]:
     """
     Time a function with jax.profiler and get the run time from the trace.
     """
@@ -127,7 +139,7 @@ def timeit_from_trace(f, *args, matrix_dim=None, warmup_tries=10, tries=10, task
         data = f(*args)
     jax.block_until_ready(data)
     if is_multihost:
-        multihost_utils.sync_global_devices(f'warmup_done_{task}')
+        multihost_utils.sync_global_devices(f"warmup_done_{task}")
 
     if matrix_dim is not None:
         trace_name = f"{task}_dim_{matrix_dim}"
@@ -146,17 +158,23 @@ def timeit_from_trace(f, *args, matrix_dim=None, warmup_tries=10, tries=10, task
             with jax.profiler.TraceAnnotation(task):
                 jax.block_until_ready(f(*args))
             if is_multihost:
-                    multihost_utils.sync_global_devices(f'end_run_{i}_{task}')
+                multihost_utils.sync_global_devices(f"end_run_{i}_{task}")
     trace = get_trace(tmp_trace_dir)
 
     if trace_full_dir != tmp_trace_dir:
         # Upload the traces to desired location
-        upload_to_storage(trace_dir=trace_full_dir, local_file=tmp_trace_dir)
+        upload_to_storage(remote_dir=trace_full_dir, local_file=tmp_trace_dir)
     return get_metrics_from_trace(trace, task)
 
 
 def maybe_write_metrics_file(
-    metrics_dir, metrics, metadata, test_name, test_start_time, test_end_time
+    metrics_dir,
+    metrics,
+    metadata,
+    test_name,
+    test_start_time,
+    test_end_time,
+    remote_dir=None,
 ):
     """Writes metrics to a JSONL file to be consumed by the XLML metrics pipeline."""
 
@@ -198,26 +216,29 @@ def maybe_write_metrics_file(
     with jsonlines.open(jsonl_path, mode="a") as writer:
         writer.write(metrics_data)
 
+    if remote_dir:
+        upload_to_storage(remote_dir=remote_dir, local_file=jsonl_path)
 
-def upload_to_storage(trace_dir: str, local_file: str):
+
+def upload_to_storage(remote_dir: str, local_file: str):
     """
     Uploads a local file to a specified storage location.
     """
 
-    if trace_dir.startswith("gs://"):  # Google Cloud Storage (GCS)
+    if remote_dir.startswith("gs://"):  # Google Cloud Storage (GCS)
         try:
             subprocess.run(
-                ["gsutil", "cp", "-r", local_file, trace_dir],
+                ["gsutil", "cp", "-r", local_file, remote_dir],
                 check=True,
                 capture_output=True,
             )
 
         except subprocess.CalledProcessError as e:
             print(
-                f"Failed to upload '{local_file}' to GCS: '{trace_dir}'. Error: {e.stderr.decode()}"
+                f"Failed to upload '{local_file}' to GCS: '{remote_dir}'. Error: {e.stderr.decode()}"
             )
     else:
-        raise KeyError(f"{trace_dir} is not a valid GCS path.")
+        raise KeyError(f"{remote_dir} is not a valid GCS path.")
 
 
 class MetricsStatistics:
@@ -347,5 +368,5 @@ def rename_xla_dump(
                     f"An unexpected error occurred while copy '{original_filepath}': {e}"
                 )
         else:
-            upload_to_storage(trace_dir=new_filepath, local_file=original_filepath)
+            upload_to_storage(remote_dir=new_filepath, local_file=original_filepath)
     print(f"The XLA dump is stored in {dest_xla_dump_dir}")

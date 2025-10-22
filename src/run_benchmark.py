@@ -13,7 +13,7 @@ import itertools
 import random
 import string
 from typing import Any, Callable, Dict, List, Tuple
-from benchmark_utils import maybe_write_metrics_file, rename_xla_dump
+from benchmark_utils import maybe_write_metrics_file, rename_xla_dump, upload_to_storage
 import jax
 import yaml
 import ray
@@ -121,7 +121,8 @@ def get_benchmark_functions(
 
 
 def preprocess_benchmark_param(
-    benchmark_param: Dict[str, Any], trace_dir: string = None
+    benchmark_param: Dict[str, Any],
+    trace_dir: string = None,
 ) -> Dict[str, Any]:
     """Preprocess the benchmark parameter before running the benchmark."""
     if "dtype" in benchmark_param:
@@ -225,7 +226,9 @@ def write_to_csv(csv_path: str, calculate_metrics_results: List[Dict[str, Any]])
             if isinstance(val, Dict):
                 output_dict.update(flatten_and_sanitize_dict(val))
             else:
-                output_dict[key] = json.dumps(val) if isinstance(val, (list, tuple, set)) else val
+                output_dict[key] = (
+                    json.dumps(val) if isinstance(val, (list, tuple, set)) else val
+                )
 
         return output_dict
 
@@ -247,7 +250,7 @@ def write_to_csv(csv_path: str, calculate_metrics_results: List[Dict[str, Any]])
 
         print(f"Metrics written to CSV at {csv_path}.")
     except Exception as e:
-        # Temporary workaround to catch all exceptions and print a warning as 
+        # Temporary workaround to catch all exceptions and print a warning as
         # `lax_conv_general_dilated` benchmark fails during nightly test runs at `convert_dict_to_df`.
         print(f"Failed to write metrics to CSV: {e}")
 
@@ -261,8 +264,10 @@ def run_single_benchmark(benchmark_config: Dict[str, Any]):
     if benchmark_sweep_params:
         benchmark_params += generate_benchmark_params_sweeping(benchmark_sweep_params)
     csv_path = benchmark_config.get("csv_path")
+    csv_upload_dir = benchmark_config.get("csv_upload_dir")
     trace_dir = benchmark_config.get("trace_dir")
     xlml_metrics_dir = benchmark_config.get("xlml_metrics_dir")
+    xlml_metrics_upload_dir = benchmark_config.get("xlml_metrics_upload_dir")
     xla_dump_dir = benchmark_config.get("xla_dump_dir")
     warmup_tries = benchmark_config.get("warmup_tries")
     warmup_tries = warmup_tries if warmup_tries is not None else 10
@@ -318,6 +323,7 @@ def run_single_benchmark(benchmark_config: Dict[str, Any]):
                 benchmark_name,
                 test_start_time,
                 test_end_time,
+                xlml_metrics_upload_dir,
             )
         # Post process the xla dump
         if xla_dump_dir:
@@ -333,7 +339,10 @@ def run_single_benchmark(benchmark_config: Dict[str, Any]):
         test_name = f"t_{benchmark_name}_" + "".join(
             random.choices(string.ascii_uppercase + string.digits, k=10)
         )
-        write_to_csv(f"{csv_path}/{test_name}.csv", calculate_metrics_results)
+        local_file_name = f"{csv_path}/{test_name}.csv"
+        write_to_csv(local_file_name, calculate_metrics_results)
+        if csv_upload_dir:
+            upload_to_storage(remote_dir=csv_upload_dir, local_file=local_file_name)
 
 
 def main(config_path: str, multithreaded: bool):
@@ -417,7 +426,9 @@ def run_benchmark_multithreaded(benchmark_config):
     with ThreadPoolExecutor(max_workers=num_hosts) as executor:
         # Create a mapping of futures to their corresponding parameters
         future_to_param = {
-            executor.submit(benchmark_func, **benchmark_param, warmup_tries=warmup_tries): benchmark_param
+            executor.submit(
+                benchmark_func, **benchmark_param, warmup_tries=warmup_tries
+            ): benchmark_param
             for benchmark_param in preprocessed_benchmark_params
         }
 
