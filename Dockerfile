@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y google-cloud-sdk
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.12 1
 
 # Set environment variables for Google Cloud SDK and Python 3.12
-ENV PATH="/usr/local/google-cloud-sdk/bin:/usr/local/bin/python3.11:${PATH}"
+ENV PATH="/usr/local/google-cloud-sdk/bin:/usr/local/bin/python3.12:${PATH}"
 
 # Set the working directory
 WORKDIR /app
